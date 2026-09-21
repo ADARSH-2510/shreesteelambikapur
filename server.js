@@ -713,7 +713,7 @@ function renderProductPage(data, req) {
   if (variety) slugParts.push(productPageSlug(variety.name));
 
   const canonical =
-    'https://shreesteelambikapur.up.railway.app/products/' +
+  'https://shreesteelambikapur.onrender.com/products/' +
     slugParts.join('/');
 
   const heading =
