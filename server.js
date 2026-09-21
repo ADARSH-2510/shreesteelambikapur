@@ -843,7 +843,7 @@ function renderProductPage(data, req) {
 
 
 async function productPageSitemapXml() {
-  const baseUrl = 'https://shreesteelambikapur.up.railway.app';
+  const baseUrl = 'https://shreesteelambikapur.onrender.com';
 
   const productResult = await db.execute({
     sql: 'SELECT id,name FROM products WHERE available=1 AND visible=1 ORDER BY sort_order,id',
