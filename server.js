@@ -4,6 +4,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { createClient } = require('@libsql/client');
 const bcrypt = require('bcryptjs');
+const { v2: cloudinary } = require('cloudinary');
 
 function loadEnv(file = path.join(__dirname, '.env')) {
   try {
@@ -19,6 +20,14 @@ function loadEnv(file = path.join(__dirname, '.env')) {
 }
 
 loadEnv();
+
+if (process.env.CLOUDINARY_URL) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_URL.split('@')[1],
+    api_key: process.env.CLOUDINARY_URL.split('//')[1].split(':')[0],
+    api_secret: process.env.CLOUDINARY_URL.split('//')[1].split(':')[1].split('@')[0]
+  });
+}
 
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
@@ -134,9 +143,39 @@ function parseMultipart(buffer,contentType){
 }
 function safeFilename(name){return String(name||'upload').toLowerCase().replace(/[^a-z0-9._-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'')||'upload';}
 async function saveUploadedImage(file,folder,prefix){
-  if(!file)return '';const allowed=new Map([['image/jpeg','.jpg'],['image/png','.png'],['image/webp','.webp'],['image/gif','.gif']]);const ext=allowed.get(file.contentType);
-  if(!ext)throw new Error('Only JPG, PNG, WEBP or GIF images are allowed');if(file.data.length>5*1024*1024)throw new Error('Image must be 5 MB or smaller');
-  const dir=path.join(PUBLIC,'assets',folder);fs.mkdirSync(dir,{recursive:true});const filename=`${Date.now()}-${safeFilename(prefix)}${ext}`;fs.writeFileSync(path.join(dir,filename),file.data);return `/assets/${folder}/${filename}`;
+  if(!file)return '';
+
+  const allowed=new Map([
+    ['image/jpeg','.jpg'],
+    ['image/png','.png'],
+    ['image/webp','.webp'],
+    ['image/gif','.gif']
+  ]);
+
+  const ext=allowed.get(file.contentType);
+
+  if(!ext)throw new Error('Only JPG, PNG, WEBP or GIF images are allowed');
+  if(file.data.length>5*1024*1024)throw new Error('Image must be 5 MB or smaller');
+
+  const publicId=`${Date.now()}-${safeFilename(prefix)}`;
+
+  const result=await new Promise((resolve,reject)=>{
+    const stream=cloudinary.uploader.upload_stream(
+      {
+        folder:`shree-steel/${folder}`,
+        public_id:publicId,
+        resource_type:'image'
+      },
+      (error,result)=>{
+        if(error)return reject(error);
+        resolve(result);
+      }
+    );
+
+    stream.end(file.data);
+  });
+
+  return result.secure_url;
 }
 function safeEqual(a,b){const aa=Buffer.from(String(a||'')),bb=Buffer.from(String(b||''));return aa.length===bb.length&&crypto.timingSafeEqual(aa,bb);}
 async function sendOtpEmail(to,code){
