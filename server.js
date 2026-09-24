@@ -1476,7 +1476,9 @@ async function startServer() {
   const r=await db.execute({sql,args});
   if(!r.rows.length)return send(res,200,{ok:true,message:'If the account details are correct, a 6-digit verification code has been sent.'});
   const a=r.rows[0];
-  const destination=String(a.recovery_email_1||a.recovery_email_2||'').trim().toLowerCase();
+  const destination = mode === 'admin_email'
+  ? String(a.email || '').trim().toLowerCase()
+  : String(a.recovery_email_1 || a.recovery_email_2 || '').trim().toLowerCase();
   if(!destination)return send(res,503,{error:'No recovery email is configured for this admin account.'});
   if(a.otp_last_sent_at&&Date.now()-new Date(a.otp_last_sent_at).getTime()<60000)return send(res,429,{error:'Please wait 60 seconds before requesting another code.'});
   const challenge=crypto.randomBytes(24).toString('hex'),code=String(crypto.randomInt(100000,1000000));
