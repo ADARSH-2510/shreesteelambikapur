@@ -462,6 +462,8 @@ if(pipesProduct.rows.length){
 await db.execute("DELETE FROM brand_varieties WHERE brand_id IN (SELECT id FROM brands WHERE name='Jindal Panther' AND product_id=(SELECT id FROM products WHERE lower(name)='tmt steel' LIMIT 1))");
 await db.execute("DELETE FROM brands WHERE name='Jindal Panther' AND product_id=(SELECT id FROM products WHERE lower(name)='tmt steel' LIMIT 1)");
 await db.execute("DELETE FROM brands WHERE name='Jindal Cement'");
+await db.execute("DELETE FROM brand_varieties WHERE brand_id IN (SELECT id FROM brands WHERE name='Jindal Steel & Power Limited')");
+await db.execute("DELETE FROM brands WHERE name='Jindal Steel & Power Limited'");
 await db.execute("DELETE FROM brand_varieties WHERE brand_id IN (SELECT id FROM brands WHERE name='HIL / BirlaNu' AND product_id=(SELECT id FROM products WHERE lower(name)='roofing sheets' LIMIT 1))");
 await db.execute("DELETE FROM brands WHERE name='HIL / BirlaNu' AND product_id=(SELECT id FROM products WHERE lower(name)='roofing sheets' LIMIT 1)");
 await db.execute("DELETE FROM product_options WHERE product_id=(SELECT id FROM products WHERE lower(name)='roofing sheets' LIMIT 1) AND lower(trim(option_value)) NOT IN ('6 ft','6.5 ft','8 ft','10 ft')");
