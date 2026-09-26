@@ -1,4 +1,4 @@
-let products = [], brands = [], quoteProducts = [];
+﻿let products = [], brands = [], quoteProducts = [];
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
@@ -661,33 +661,173 @@ load();
   const slider = document.querySelector('.hero-story-slider');
   if (!slider) return;
 
-  const slides = [...slider.querySelectorAll('.hero-story-slide')];
-  const dots = [...slider.querySelectorAll('.hero-story-dot')];
-  const prev = slider.querySelector('.hero-story-prev');
-  const next = slider.querySelector('.hero-story-next');
+  async function loadDynamicSlides(){
+
+    try{
+      const response = await fetch('/api/hero-slides', {
+        cache: 'no-store'
+      });
+
+      if(!response.ok) return;
+
+      const data = await response.json();
+
+      if(!Array.isArray(data) || !data.length) return;
+
+      const oldSlides = [
+        ...slider.querySelectorAll('.hero-story-slide')
+      ];
+
+      oldSlides.forEach(slide => slide.remove());
+
+      const dotsContainer =
+        slider.querySelector('.hero-story-dots');
+
+      if(dotsContainer){
+        dotsContainer.innerHTML = '';
+      }
+
+      const nextButton =
+        slider.querySelector('.hero-story-next');
+
+      data.forEach((item, index) => {
+
+        const slide =
+          document.createElement('div');
+
+        slide.className =
+          'hero-story-slide' +
+          (index === 0 ? ' is-active' : '');
+
+        const image =
+          document.createElement('img');
+
+        image.src = item.image || '';
+        image.alt = item.title || 'Shree Steel construction story';
+
+        const caption =
+          document.createElement('div');
+
+        caption.className =
+          'hero-story-caption';
+
+        const label =
+          document.createElement('span');
+
+        label.textContent =
+          item.label || '';
+
+        const title =
+          document.createElement('strong');
+
+        title.textContent =
+          item.title || '';
+
+        const description =
+          document.createElement('small');
+
+        description.textContent =
+          item.description || '';
+
+        caption.appendChild(label);
+        caption.appendChild(title);
+        caption.appendChild(description);
+
+        slide.appendChild(image);
+        slide.appendChild(caption);
+
+        if(nextButton){
+          slider.insertBefore(slide, nextButton);
+        }else{
+          slider.appendChild(slide);
+        }
+
+        if(dotsContainer){
+
+          const dot =
+            document.createElement('button');
+
+          dot.className =
+            'hero-story-dot' +
+            (index === 0 ? ' is-active' : '');
+
+          dot.type = 'button';
+
+          dot.setAttribute(
+            'aria-label',
+            `Story ${index + 1}`
+          );
+
+          dotsContainer.appendChild(dot);
+        }
+
+      });
+
+    }catch(error){
+      console.warn(
+        'Hero carousel API unavailable; using existing slides.',
+        error
+      );
+    }
+  }
+
+  let slides = [];
+  let dots = [];
+  const prev =
+    slider.querySelector('.hero-story-prev');
+
+  const next =
+    slider.querySelector('.hero-story-next');
 
   let current = 0;
   let timer = null;
   let touchStart = 0;
 
+  function refreshElements(){
+    slides = [
+      ...slider.querySelectorAll('.hero-story-slide')
+    ];
+
+    dots = [
+      ...slider.querySelectorAll('.hero-story-dot')
+    ];
+  }
+
   function show(index){
-    current = (index + slides.length) % slides.length;
+
+    if(!slides.length) return;
+
+    current =
+      (index + slides.length) % slides.length;
 
     slides.forEach((slide, i) => {
-      slide.classList.toggle('is-active', i === current);
+      slide.classList.toggle(
+        'is-active',
+        i === current
+      );
     });
 
     dots.forEach((dot, i) => {
-      dot.classList.toggle('is-active', i === current);
+      dot.classList.toggle(
+        'is-active',
+        i === current
+      );
     });
   }
 
   function start(){
+
     stop();
-    timer = setInterval(() => show(current + 1), 4500);
+
+    if(slides.length < 2) return;
+
+    timer = setInterval(() => {
+      show(current + 1);
+    }, 4500);
   }
 
   function stop(){
+
     if(timer){
       clearInterval(timer);
       timer = null;
@@ -704,33 +844,54 @@ load();
     start();
   });
 
-  dots.forEach((dot, i) => {
-    dot.addEventListener('click', () => {
-      show(i);
-      start();
-    });
-  });
-
   slider.addEventListener('mouseenter', stop);
   slider.addEventListener('mouseleave', start);
 
   slider.addEventListener('touchstart', event => {
-    touchStart = event.changedTouches[0].screenX;
+
+    touchStart =
+      event.changedTouches[0].screenX;
+
     stop();
+
   }, {passive:true});
 
   slider.addEventListener('touchend', event => {
-    const distance = event.changedTouches[0].screenX - touchStart;
+
+    const distance =
+      event.changedTouches[0].screenX -
+      touchStart;
 
     if(Math.abs(distance) > 45){
-      show(distance < 0 ? current + 1 : current - 1);
+      show(
+        distance < 0
+          ? current + 1
+          : current - 1
+      );
     }
 
     start();
+
   }, {passive:true});
 
-  show(0);
-  start();
+  async function init(){
+
+    await loadDynamicSlides();
+
+    refreshElements();
+
+    dots.forEach((dot, i) => {
+      dot.addEventListener('click', () => {
+        show(i);
+        start();
+      });
+    });
+
+    show(0);
+    start();
+  }
+
+  init();
 
 })();
 

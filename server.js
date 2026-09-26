@@ -328,7 +328,7 @@ async function initializeDatabase() {
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       )`
     },
-    {
+        {
       sql: `CREATE TABLE IF NOT EXISTS enquiries(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -338,8 +338,93 @@ async function initializeDatabase() {
         status TEXT NOT NULL DEFAULT 'New',
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       )`
+    },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS hero_slides(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        image TEXT NOT NULL DEFAULT '',
+        label TEXT NOT NULL DEFAULT '',
+        title TEXT NOT NULL DEFAULT '',
+        description TEXT NOT NULL DEFAULT '',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        visible INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`
     }
   ]);
+
+    const heroSlideCount = await db.execute(
+    'SELECT COUNT(*) AS count FROM hero_slides'
+  );
+
+  if (Number(heroSlideCount.rows?.[0]?.count || 0) === 0) {
+    const initialHeroSlides = [
+      {
+        image: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1400&q=88',
+        label: '01 · DREAM HOMES',
+        title: 'Building dreams from the foundation up.',
+        description: 'Quality construction materials for homes built to last.',
+        sort_order: 1
+      },
+      {
+        image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1400&q=88',
+        label: '02 · RESIDENTIAL',
+        title: 'Strong homes start with strong materials.',
+        description: 'Trusted materials for residential construction.',
+        sort_order: 2
+      },
+      {
+        image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1400&q=88',
+        label: '03 · COMMERCIAL',
+        title: 'Materials for projects that stand tall.',
+        description: 'Reliable steel and building materials for commercial work.',
+        sort_order: 3
+      },
+      {
+        image: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1400&q=88',
+        label: '04 · PROJECTS',
+        title: 'From plans to real structures.',
+        description: 'Supporting construction at every stage of the project.',
+        sort_order: 4
+      },
+      {
+        image: 'https://images.unsplash.com/photo-1511818966892-d7d671e672a2?auto=format&fit=crop&w=1400&q=88',
+        label: '05 · DEVELOPMENT',
+        title: 'Helping communities take shape.',
+        description: 'Construction materials for growing residential developments.',
+        sort_order: 5
+      },
+      {
+        image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1400&q=88',
+        label: '06 · STRUCTURE',
+        title: 'Strength behind every structure.',
+        description: 'TMT steel and construction materials for dependable builds.',
+        sort_order: 6
+      },
+      {
+        image: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?auto=format&fit=crop&w=1400&q=88',
+        label: '07 · COMPLETED',
+        title: 'Built. Completed. Trusted.',
+        description: 'Helping turn construction plans into finished spaces.',
+        sort_order: 7
+      }
+    ];
+
+    for (const slide of initialHeroSlides) {
+      await db.execute({
+        sql: `INSERT INTO hero_slides
+          (image, label, title, description, sort_order, visible)
+          VALUES (?, ?, ?, ?, ?, 1)`,
+        args: [
+          slide.image,
+          slide.label,
+          slide.title,
+          slide.description,
+          slide.sort_order
+        ]
+      });
+    }
+  }
 
   const standardUnits=['PCS','BAGS','KG','TON','MTR','SQFT','SQM','LTR'];
   for(const unit of standardUnits){
@@ -973,7 +1058,28 @@ async function startServer() {
         }
         return send(res,200,rows);
       }
+            if (req.method === 'GET' && p === '/api/hero-slides') {
+        const r = await db.execute(`
+          SELECT id, image, label, title, description, sort_order, visible
+          FROM hero_slides
+          WHERE visible = 1
+          ORDER BY sort_order, id
+        `);
 
+        return send(
+          res,
+          200,
+          r.rows.map(slide => ({
+            id: Number(slide.id),
+            image: slide.image || '',
+            label: slide.label || '',
+            title: slide.title || '',
+            description: slide.description || '',
+            sort_order: Number(slide.sort_order) || 0,
+            visible: Number(slide.visible) !== 0
+          }))
+        );
+      }
       if (req.method === 'GET' && p === '/api/quote-data') {
         // quote-data product option cleanup: brand varieties are never specifications.
         await db.execute(`DELETE FROM product_options WHERE lower(trim(option_value)) LIKE 'variant:%'`);
@@ -1676,7 +1782,217 @@ async function startServer() {
 
           return send(res, 200, { ok: true });
         }
+                if(req.method==='GET'&&type==='hero-slides'){
+          const r=await db.execute(`
+            SELECT id,image,label,title,description,sort_order,visible,created_at
+            FROM hero_slides
+            ORDER BY sort_order,id
+          `);
 
+          return send(res,200,r.rows.map(x=>({
+            id:Number(x.id),
+            image:String(x.image||''),
+            label:String(x.label||''),
+            title:String(x.title||''),
+            description:String(x.description||''),
+            sort_order:Number(x.sort_order)||0,
+            visible:Number(x.visible)!==0,
+            created_at:x.created_at||''
+          })));
+        }
+                if(req.method==='POST'&&type==='hero-slides'){
+          let x={},files=[];
+          const ct=String(req.headers['content-type']||'');
+
+          if(ct.toLowerCase().startsWith('multipart/form-data')){
+            const q=parseMultipart(await readRaw(req),ct);
+            x=q.fields;
+            files=q.files;
+          }else{
+            x=await body(req);
+          }
+
+          const label=String(x.label||'').trim();
+          const title=String(x.title||'').trim();
+          const description=String(x.description||'').trim();
+
+          if(!label)return send(res,400,{error:'Slide label is required'});
+          if(!title)return send(res,400,{error:'Slide title is required'});
+
+          let image=String(x.image||'').trim();
+          const imageFile=files.find(f=>f.field==='image');
+
+          if(imageFile){
+            image=await saveUploadedImage(imageFile,'hero-slides',title);
+          }
+
+          if(!image){
+            return send(res,400,{error:'Slide image is required'});
+          }
+
+          const next=await db.execute(
+            'SELECT COALESCE(MAX(sort_order),0)+1 AS next_order FROM hero_slides'
+          );
+
+          const requested=Math.max(
+            1,
+            Number(x.sort_order)||Number(next.rows[0]?.next_order)||1
+          );
+
+          await db.execute({
+            sql:`
+              UPDATE hero_slides
+              SET sort_order=sort_order+1
+              WHERE sort_order>=?
+            `,
+            args:[requested]
+          });
+
+          const visible=x.visible===undefined
+            ? 1
+            : (Number(x.visible)?1:0);
+
+          const r=await db.execute({
+            sql:`
+              INSERT INTO hero_slides
+              (image,label,title,description,sort_order,visible)
+              VALUES(?,?,?,?,?,?)
+            `,
+            args:[
+              image,
+              label,
+              title,
+              description,
+              requested,
+              visible
+            ]
+          });
+
+          return send(res,200,{
+            id:Number(r.lastInsertRowid),
+            sort_order:requested
+          });
+        }
+                if(req.method==='PUT'&&type==='hero-slides'&&id){
+          let x={},files=[];
+          const ct=String(req.headers['content-type']||'');
+
+          if(ct.toLowerCase().startsWith('multipart/form-data')){
+            const q=parseMultipart(await readRaw(req),ct);
+            x=q.fields;
+            files=q.files;
+          }else{
+            x=await body(req);
+          }
+
+          const existing=await db.execute({
+            sql:`
+              SELECT image,sort_order,visible
+              FROM hero_slides
+              WHERE id=?
+              LIMIT 1
+            `,
+            args:[id]
+          });
+
+          if(!existing.rows.length){
+            return send(res,404,{error:'Hero slide not found'});
+          }
+
+          const current=existing.rows[0];
+
+          const label=String(x.label||'').trim();
+          const title=String(x.title||'').trim();
+          const description=String(x.description||'').trim();
+
+          if(!label){
+            return send(res,400,{error:'Slide label is required'});
+          }
+
+          if(!title){
+            return send(res,400,{error:'Slide title is required'});
+          }
+
+          let image=String(x.image||current.image||'').trim();
+
+          const imageFile=files.find(f=>f.field==='image');
+
+          if(imageFile){
+            image=await saveUploadedImage(
+              imageFile,
+              'hero-slides',
+              title
+            );
+          }
+
+          if(!image){
+            return send(res,400,{error:'Slide image is required'});
+          }
+
+          const currentOrder=Number(current.sort_order)||1;
+          const requested=Math.max(
+            1,
+            Number(x.sort_order)||currentOrder
+          );
+
+          if(requested!==currentOrder){
+            if(requested<currentOrder){
+              await db.execute({
+                sql:`
+                  UPDATE hero_slides
+                  SET sort_order=sort_order+1
+                  WHERE sort_order>=?
+                    AND sort_order<?
+                    AND id<>?
+                `,
+                args:[requested,currentOrder,id]
+              });
+            }else{
+              await db.execute({
+                sql:`
+                  UPDATE hero_slides
+                  SET sort_order=sort_order-1
+                  WHERE sort_order>?
+                    AND sort_order<=?
+                    AND id<>?
+                `,
+                args:[currentOrder,requested,id]
+              });
+            }
+          }
+
+          const visible=x.visible===undefined
+            ? Number(current.visible)!==0
+            : Number(x.visible)!==0;
+
+          await db.execute({
+            sql:`
+              UPDATE hero_slides
+              SET image=?,
+                  label=?,
+                  title=?,
+                  description=?,
+                  sort_order=?,
+                  visible=?
+              WHERE id=?
+            `,
+            args:[
+              image,
+              label,
+              title,
+              description,
+              requested,
+              visible?1:0,
+              id
+            ]
+          });
+
+          return send(res,200,{
+            ok:true,
+            id,
+            sort_order:requested
+          });
+        }
         if(req.method==='POST'&&type==='products'){
           const x=await body(req),name=String(x.name||'').trim();if(!name)return send(res,400,{error:'Product name is required'});
           const next=await appendPriority('products');
@@ -1690,6 +2006,32 @@ async function startServer() {
           await db.execute({sql:'UPDATE products SET name=?,description=? WHERE id=?',args:[name,String(x.description||'').trim(),id]});
           await saveProductQuoteConfiguration(id,x.default_unit,x.options);
           return send(res,200,{ok:true,sort_order:Number(current.rows[0]?.sort_order)||requested});
+        }
+                if(req.method==='DELETE'&&type==='hero-slides'&&id){
+          const existing=await db.execute({
+            sql:'SELECT sort_order FROM hero_slides WHERE id=? LIMIT 1',
+            args:[id]
+          });
+
+          if(!existing.rows.length){
+            return send(res,404,{error:'Hero slide not found'});
+          }
+
+          const removedOrder=Number(existing.rows[0].sort_order)||0;
+
+          await db.execute({
+            sql:'DELETE FROM hero_slides WHERE id=?',
+            args:[id]
+          });
+
+          if(removedOrder>0){
+            await db.execute({
+              sql:'UPDATE hero_slides SET sort_order=sort_order-1 WHERE sort_order>?',
+              args:[removedOrder]
+            });
+          }
+
+          return send(res,200,{ok:true});
         }
         if(req.method==='DELETE'&&type==='products'&&id){
           const used=await db.execute('SELECT COUNT(*) AS count FROM brands WHERE product_id=?',[id]);if(Number(used.rows[0].count)>0)return send(res,409,{error:'This product has brands assigned to it. Reassign or delete those brands first.'});

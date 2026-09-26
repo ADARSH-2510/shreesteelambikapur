@@ -115,11 +115,11 @@ function resetPasswordForm(info){
   };
 }
 function dashboard(info){
-  me=info;app.innerHTML=`<header class="top"><div class="brand">SHREE STEEL · ADMIN</div><div class="actions"><button class="btn gray" id="settingsBtn">Admin Account</button><button class="btn gray" id="logout">Logout</button></div></header><main class="wrap"><div class="tabs"><button class="tab active" data-tab="products">Products</button><button class="tab" data-tab="brands">Trusted Brands</button><button class="tab" data-tab="enquiries">Enquiries</button></div><div id="content"></div></main>`;
+  me=info;app.innerHTML=`<header class="top"><div class="brand">SHREE STEEL · ADMIN</div><div class="actions"><button class="btn gray" id="settingsBtn">Admin Account</button><button class="btn gray" id="logout">Logout</button></div></header><main class="wrap"><div class="tabs"><button class="tab active" data-tab="products">Products</button><button class="tab" data-tab="brands">Trusted Brands</button><button class="tab" data-tab="enquiries">Enquiries</button><button class="tab" data-tab="hero">Hero Carousel</button></div><div id="content"></div></main>`;
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));render()});
   logout.onclick=async()=>{await json('/api/admin/logout',{method:'POST'});login()};settingsBtn.onclick=settings;render();
 }
-async function render(){const c=document.getElementById('content');c.innerHTML='<div class="panel">Loading...</div>';try{if(tab==='products')return productsView(c);if(tab==='brands')return brandsView(c);return enquiriesView(c)}catch(e){c.innerHTML=`<div class="panel notice">${esc(e.message)}</div>`}}
+async function render(){const c=document.getElementById('content');c.innerHTML='<div class="panel">Loading...</div>';try{if(tab==='products')return productsView(c);if(tab==='brands')return brandsView(c);if(tab==='hero')return heroSlidesView(c);return enquiriesView(c)}catch(e){c.innerHTML=`<div class="panel notice">${esc(e.message)}</div>`}}
 async function productsView(c){
   products=await json('/api/products');
   c.innerHTML=`<section class="panel"><div class="row" style="border:0;padding-top:0"><div><h2>Products</h2><div class="meta">Products are independent. Brands are categorized under Products from the Trusted Brands section.</div></div><button class="btn blue" id="addProduct">ADD PRODUCT</button></div></section><section class="panel">${products.length?products.map(p=>`<div class="row"><div><b>${esc(p.name)}</b><div class="meta">${esc(p.description)}<br>Priority: ${Number(p.sort_order)||0}</div></div><div class="actions"><button class="btn gray" data-edit="${p.id}">Edit</button><button class="btn danger" data-delete="${p.id}">Delete</button></div></div>`).join(''):'<div class="empty">No products yet.</div>'}</section>`;
@@ -143,6 +143,258 @@ async function productModal(id=null){
   productForm.onsubmit=async e=>{e.preventDefault();formMsg.textContent='Saving...';const options=pspecs.value.split(/\r?\n/).map(line=>{const i=line.indexOf(':');return i>0?{name:line.slice(0,i).trim()||'Specification',value:line.slice(i+1).trim()}:{name:'Specification',value:line.trim()}}).filter(x=>x.value);const chosenUnit=punit.value==='__NEW_UNIT__'?pcustomunit.value.trim():punit.value;
   if(!chosenUnit){formMsg.textContent='Please enter a product unit.';return;} if(chosenUnit.length>20){formMsg.textContent='Product unit must be 20 characters or fewer.';return;}
   const body={name:pname.value,description:pdesc.value,sort_order:Math.max(1,Number(psort.value)||1),default_unit:chosenUnit,options};try{await json(id?'/api/admin/products/'+id:'/api/admin/products',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});el.remove();render()}catch(x){formMsg.textContent=x.message}};
+}
+async function heroSlidesView(c){
+  const slides=await json('/api/admin/hero-slides');
+
+  c.innerHTML=`
+    <section class="panel">
+      <div class="row" style="border:0;padding-top:0">
+        <div>
+          <h2>Hero Carousel</h2>
+          <div class="meta">
+            Manage the homepage hero carousel. Changes here will appear on the website.
+          </div>
+        </div>
+        <button class="btn blue" id="addHeroSlide">ADD SLIDE</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      ${
+        slides.length
+        ? slides.map(s=>`
+          <div class="row">
+            <div class="brand-item">
+              ${
+                s.image
+                ? `<img class="thumb" src="${esc(s.image)}" alt="">`
+                : ''
+              }
+              <div>
+                <b>${esc(s.title)}</b>
+                <div class="meta">
+                  ${esc(s.label)}<br>
+                  Priority: ${Number(s.sort_order)||0} ·
+                  ${s.visible?'Available':'Unavailable'}
+                </div>
+                <div class="meta">
+                  ${esc(s.description||'')}
+                </div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="btn gray" data-edit-hero="${s.id}">
+                Edit
+              </button>
+              <button class="btn danger" data-delete-hero="${s.id}">
+                Delete
+              </button>
+            </div>
+          </div>
+        `).join('')
+        : '<div class="empty">No hero slides yet.</div>'
+      }
+    </section>
+  `;
+
+  addHeroSlide.onclick=()=>heroSlideModal();
+
+  c.querySelectorAll('[data-edit-hero]').forEach(b=>{
+    b.onclick=()=>heroSlideModal(Number(b.dataset.editHero));
+  });
+
+  c.querySelectorAll('[data-delete-hero]').forEach(b=>{
+    b.onclick=async()=>{
+      if(!confirm('Delete this hero slide?'))return;
+
+      try{
+        await json(
+          '/api/admin/hero-slides/'+b.dataset.deleteHero,
+          {method:'DELETE'}
+        );
+
+        render();
+      }catch(e){
+        alert(e.message);
+      }
+    };
+  });
+}
+async function heroSlideModal(id=null){
+  const slides=await json('/api/admin/hero-slides');
+  const s=id?slides.find(x=>Number(x.id)===id):null;
+
+  const next=slides.reduce(
+    (m,x)=>Math.max(m,Number(x.sort_order)||0),
+    0
+  )+1;
+
+  const priority=Number(s?.sort_order)||next;
+
+  const el=modal(
+    s?'Edit Hero Slide':'Add Hero Slide',
+    `
+    <form id="heroSlideForm" class="form">
+
+      <label class="meta">
+        Hero Image
+        <input
+          id="heroImage"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          ${s?.image?'':'required'}
+        >
+      </label>
+
+      ${
+        s?.image
+        ? `
+          <div class="meta">
+            Current image:
+            <a href="${esc(s.image)}" target="_blank">
+              View current image
+            </a>
+          </div>
+
+          <div style="margin:10px 0">
+            <img
+              src="${esc(s.image)}"
+              alt=""
+              style="width:100%;max-width:520px;border-radius:12px;display:block"
+            >
+          </div>
+        `
+        : ''
+      }
+
+      <label class="meta">
+        Label
+        <input
+          id="heroLabel"
+          placeholder="01 · DREAM HOMES"
+          value="${esc(s?.label||'')}"
+          required
+        >
+      </label>
+
+      <label class="meta">
+        Title
+        <input
+          id="heroTitle"
+          placeholder="Building dreams from the foundation up."
+          value="${esc(s?.title||'')}"
+          required
+        >
+      </label>
+
+      <label class="meta">
+        Description
+        <textarea
+          id="heroDescription"
+          rows="4"
+          placeholder="Short description for this slide"
+        >${esc(s?.description||'')}</textarea>
+      </label>
+
+      <label class="meta">
+        Priority
+        <input
+          id="heroSort"
+          type="number"
+          min="1"
+          step="1"
+          value="${priority}"
+          required
+        >
+      </label>
+
+      <label class="meta">
+        Availability
+        <select id="heroVisible">
+          <option value="1" ${
+            s?.visible!==false && Number(s?.visible)!==0
+            ? 'selected'
+            : ''
+          }>Available</option>
+          <option value="0" ${
+            s?.visible===false || Number(s?.visible)===0
+            ? 'selected'
+            : ''
+          }>Unavailable</option>
+        </select>
+      </label>
+
+      <div class="actions">
+        <button class="btn blue">
+          ${s?'SAVE CHANGES':'ADD SLIDE'}
+        </button>
+      </div>
+
+      <p id="formMsg" class="meta"></p>
+
+    </form>
+    `
+  );
+
+  heroSlideForm.onsubmit=async e=>{
+    e.preventDefault();
+
+    formMsg.textContent='Saving...';
+
+    const fd=new FormData();
+
+    fd.append(
+      'label',
+      heroLabel.value.trim()
+    );
+
+    fd.append(
+      'title',
+      heroTitle.value.trim()
+    );
+
+    fd.append(
+      'description',
+      heroDescription.value.trim()
+    );
+
+    fd.append(
+      'sort_order',
+      Math.max(1,Number(heroSort.value)||1)
+    );
+
+    fd.append(
+      'visible',
+      Number(heroVisible.value)?1:0
+    );
+
+    if(heroImage.files[0]){
+      fd.append(
+        'image',
+        heroImage.files[0]
+      );
+    }
+
+    try{
+      await json(
+        id
+        ? '/api/admin/hero-slides/'+id
+        : '/api/admin/hero-slides',
+        {
+          method:id?'PUT':'POST',
+          body:fd
+        }
+      );
+
+      el.remove();
+      render();
+
+    }catch(x){
+      formMsg.textContent=x.message;
+    }
+  };
 }
 async function brandsView(c){
   [brands,products]=await Promise.all([json('/api/brands'),json('/api/products')]);
