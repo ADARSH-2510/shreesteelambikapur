@@ -472,7 +472,6 @@ async function initializeDatabase() {
     ['Everest','ROOFING SOLUTION','Roofing solutions','#d62b25','/assets/brands/everest-roofing.webp',2],
     ['GK TMT','TMT BARS','TMT reinforcement steel','#e32728','/assets/brands/gk-tmt.jpeg',3],
     ['HIL Charminar','ROOFING SHEETS','HIL Charminar roofing sheets.','#1677b8','/assets/brands/hil-birla-nu.png',4],
-    ['Jindal Bricks','BRICKS','Construction bricks','#c45732','',8]
   ];
 
   for (const x of officialBrands) {

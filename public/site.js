@@ -60,7 +60,6 @@ function brandLogoPath(name) {
     'jindal steel power': '/assets/brands/jindal-steel.png',
     'jindal steel and power limited': '/assets/brands/jindal-steel.png',
     'jindal steel power limited': '/assets/brands/jindal-steel.png',
-    'jindal bricks': '/assets/brands/jindal-steel.png'
   };
   return logos[key] || '';
 }
@@ -151,7 +150,6 @@ function productBrandData(product) {
     'jindal panther': 'Jindal Panther Cement',
     'jindal cement': 'Jindal Panther Cement',
 
-    'jindal bricks': 'Jindal Steel & Power Limited'
   };
   const desired = null;
   const raw = desired || (quoteProduct?.brands?.length ? quoteProduct.brands.map(b => b.name) : (product.brands || '').split(',').map(raw => raw.trim()).filter(Boolean));
