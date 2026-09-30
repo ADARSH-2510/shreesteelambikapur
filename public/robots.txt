@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://shreesteelambikapur.up.railway.app/sitemap.xml
+Sitemap: https://shreesteelambikapur.onrender.com/sitemap.xml
