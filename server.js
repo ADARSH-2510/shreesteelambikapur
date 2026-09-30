@@ -922,6 +922,15 @@ function renderProductPage(data, req) {
       ? '<meta property="og:image" content="' +
         productPageEscape(variety.product_image) + '">'
       : '') +
+    '<meta name="twitter:card" content="summary_large_image">' +
+    '<meta name="twitter:title" content="' +
+      productPageEscape(title + ' | Shree Steel Ambikapur') + '">' +
+    '<meta name="twitter:description" content="' +
+      productPageEscape(description) + '">' +
+    (variety && variety.product_image
+      ? '<meta name="twitter:image" content="' +
+        productPageEscape(variety.product_image) + '">'
+      : '') +
     '<title>' +
       productPageEscape(title + ' | Shree Steel Ambikapur') +
     '</title>' +
