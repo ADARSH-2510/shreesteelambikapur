@@ -833,8 +833,9 @@ function renderProductPage(data, req) {
   if (data.level === 'variety') {
     title = variety.name + ' - ' + brand.name + ' - ' + product.name;
     description =
-      'Enquire about ' + variety.name + ' from ' + brand.name +
-      ' through Shree Steel Ambikapur.';
+      variety.name + ' from ' + brand.name + ' — ' +
+      product.name + ' available through Shree Steel Ambikapur. ' +
+      'Enquire for product details and pricing.';
   }
 
   const slugParts = [productPageSlug(product.name)];
