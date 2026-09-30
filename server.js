@@ -918,6 +918,10 @@ function renderProductPage(data, req) {
       productPageEscape(description) + '">' +
     '<meta property="og:url" content="' +
       productPageEscape(canonical) + '">' +
+    (variety && variety.product_image
+      ? '<meta property="og:image" content="' +
+        productPageEscape(variety.product_image) + '">'
+      : '') +
     '<title>' +
       productPageEscape(title + ' | Shree Steel Ambikapur') +
     '</title>' +
