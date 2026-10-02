@@ -833,8 +833,9 @@ function renderProductPage(data, req) {
   if (data.level === 'variety') {
     title = variety.name + ' - ' + brand.name + ' - ' + product.name;
     description =
-      'Enquire about ' + variety.name + ' from ' + brand.name +
-      ' through Shree Steel Ambikapur.';
+      variety.name + ' from ' + brand.name + ' — ' +
+      product.name + ' available through Shree Steel Ambikapur. ' +
+      'Enquire for product details and pricing.';
   }
 
   const slugParts = [productPageSlug(product.name)];
@@ -844,6 +845,47 @@ function renderProductPage(data, req) {
   const canonical =
   'https://shreesteelambikapur.onrender.com/products/' +
     slugParts.join('/');
+  const breadcrumbItems = [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Home',
+      item: 'https://shreesteelambikapur.onrender.com/'
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: product.name,
+      item: 'https://shreesteelambikapur.onrender.com' +
+        productPageUrl(product.name)
+    }
+  ];
+
+  if (brand) {
+    breadcrumbItems.push({
+      '@type': 'ListItem',
+      position: 3,
+      name: brand.name,
+      item: 'https://shreesteelambikapur.onrender.com' +
+        productPageUrl(product.name, brand.name)
+    });
+  }
+
+  if (variety) {
+    breadcrumbItems.push({
+      '@type': 'ListItem',
+      position: 4,
+      name: variety.name,
+      item: 'https://shreesteelambikapur.onrender.com' +
+        productPageUrl(product.name, brand.name, variety.name)
+    });
+  }
+
+  const breadcrumbSchema = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbItems
+  });
 
   const heading =
     data.level === 'variety'
@@ -905,6 +947,9 @@ function renderProductPage(data, req) {
     '<html lang="en"><head>' +
     '<meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<script type="application/ld+json">' +
+      breadcrumbSchema
+    '</script>' +
     '<meta name="robots" content="index,follow">' +
     '<link rel="canonical" href="' + productPageEscape(canonical) + '">' +
     '<link rel="icon" type="image/png" href="/assets/shree-steel-favicon.png">' +
@@ -918,6 +963,19 @@ function renderProductPage(data, req) {
       productPageEscape(description) + '">' +
     '<meta property="og:url" content="' +
       productPageEscape(canonical) + '">' +
+    (variety && variety.product_image
+      ? '<meta property="og:image" content="' +
+        productPageEscape(variety.product_image) + '">'
+      : '') +
+    '<meta name="twitter:card" content="summary_large_image">' +
+    '<meta name="twitter:title" content="' +
+      productPageEscape(title + ' | Shree Steel Ambikapur') + '">' +
+    '<meta name="twitter:description" content="' +
+      productPageEscape(description) + '">' +
+    (variety && variety.product_image
+      ? '<meta name="twitter:image" content="' +
+        productPageEscape(variety.product_image) + '">'
+      : '') +
     '<title>' +
       productPageEscape(title + ' | Shree Steel Ambikapur') +
     '</title>' +
