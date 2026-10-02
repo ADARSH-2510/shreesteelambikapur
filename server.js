@@ -948,7 +948,7 @@ function renderProductPage(data, req) {
     '<meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<script type="application/ld+json">' +
-      productPageEscape(breadcrumbSchema) +
+      breadcrumbSchema
     '</script>' +
     '<meta name="robots" content="index,follow">' +
     '<link rel="canonical" href="' + productPageEscape(canonical) + '">' +
